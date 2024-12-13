@@ -1,0 +1,35 @@
+# Eclipse IDE files
+/.settings/
+/.project
+/.classpath
+/.vscode/
+
+# Build output directories
+/bin/
+/target/
+
+# Maven/Gradle specific
+/.mvn/
+/.gradle/
+/build/
+
+# Java class files
+*.class
+
+# Package distribution directory
+*.jar
+*.war
+*.ear
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.swp
+*~
+# macOS files
+.DS_Store
+
+# Windows Installer files
+Thumbs.db

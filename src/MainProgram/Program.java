@@ -269,13 +269,18 @@ public class Program {
     }
 
     static void simulateSRTF(List<Process> processes) {
+        // Initialize remaining time for each process
+        for (Process process : processes) {
+            process.remainingTime = process.burstTime;
+        }
+
         processes.sort(Comparator.comparingInt(p -> p.arrivalTime)); // Sort by arrival time
         int currentTime = 0;
         int totalWaitingTime = 0, totalTurnaroundTime = 0;
 
         System.out.println("\n--- SRTF Scheduling ---");
-        System.out.printf("%-10s%-15s%-15s%-15s%-15s%-15s\n", 
-                          "Process", "Arrival Time", "Burst Time", "Completion Time", "Turn Around Time", "Waiting Time");
+        System.out.printf("%-10s%-15s%-15s%-15s%-15s%-15s\n",
+                "Process", "Arrival Time", "Burst Time", "Completion Time", "Turn Around Time", "Waiting Time");
 
         List<Process> readyQueue = new ArrayList<>();
         int completedProcesses = 0;
@@ -283,7 +288,7 @@ public class Program {
         while (completedProcesses < processes.size()) {
             // Add processes that have arrived by currentTime
             for (Process process : processes) {
-                if (process.arrivalTime <= currentTime && !readyQueue.contains(process)) {
+                if (process.arrivalTime <= currentTime && !readyQueue.contains(process) && process.remainingTime > 0) {
                     readyQueue.add(process);
                 }
             }
@@ -291,7 +296,7 @@ public class Program {
             // If there are processes to execute
             if (!readyQueue.isEmpty()) {
                 // Select the process with the shortest remaining time
-                readyQueue.sort(Comparator.comparingInt(p -> p.remainingTime)); // Sort by remaining time
+                readyQueue.sort(Comparator.comparingInt(p -> p.remainingTime));
                 Process currentProcess = readyQueue.get(0);
 
                 // Execute the process for 1 unit of time
@@ -312,9 +317,9 @@ public class Program {
 
                     // Print process details
                     System.out.printf("%-10s%-15d%-15d%-15d%-15d%-15d\n",
-                                      currentProcess.name, currentProcess.arrivalTime,
-                                      currentProcess.burstTime, currentProcess.completionTime,
-                                      currentProcess.turnaroundTime, currentProcess.waitingTime);
+                            currentProcess.name, currentProcess.arrivalTime,
+                            currentProcess.burstTime, currentProcess.completionTime,
+                            currentProcess.turnaroundTime, currentProcess.waitingTime);
                 }
             } else {
                 // If no process is ready, advance time
@@ -324,6 +329,7 @@ public class Program {
 
         printSummary(totalWaitingTime, processes.size());
     }
+
 
 
     // Utility function to print summary

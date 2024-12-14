@@ -94,12 +94,37 @@ public class Program {
         }
         return processes;
     }
+    
+    static void printGanttChart(List<String> ganttChart) {
+        System.out.println("\n--- Gantt Chart ---");
+
+        // Print the timeline
+        StringBuilder timeline = new StringBuilder();
+        StringBuilder bar = new StringBuilder();
+
+        for (String segment : ganttChart) {
+            String[] parts = segment.split(" "); // Extract process and time range
+            String range = parts[0]; // e.g., "[0-5]"
+            String process = parts[1]; // e.g., "P1"
+
+            // Add the process name and its timeline
+            bar.append("| ").append(process).append(" ");
+            timeline.append(range).append(" ");
+        }
+        bar.append("|"); // Close the final process bar
+
+        // Print the Gantt chart
+        System.out.println(bar.toString());
+        System.out.println(timeline.toString());
+    }
+
 
     // FCFS Scheduling
     static void simulateFCFS(List<Process> processes) {
         processes.sort(Comparator.comparingInt(p -> p.arrivalTime)); // Sort by arrival time
         int currentTime = 0;
         int totalWaitingTime = 0, totalTurnaroundTime = 0;
+        List<String> ganttChart = new ArrayList<>();
 
         System.out.println("\n--- FCFS Scheduling ---");
         System.out.printf("%-10s%-15s%-15s%-15s%-15s%-15s\n", 
@@ -107,6 +132,7 @@ public class Program {
 
         for (Process process : processes) {
             currentTime = Math.max(currentTime, process.arrivalTime); // Account for idle time
+            ganttChart.add(String.format("[%d-%d] %s", currentTime, currentTime + process.burstTime, process.name));
             process.completionTime = currentTime + process.burstTime;
             process.turnaroundTime = process.completionTime - process.arrivalTime;
             process.waitingTime = process.turnaroundTime - process.burstTime;
@@ -120,8 +146,8 @@ public class Program {
 
             currentTime += process.burstTime;
         }
-        // Print the summary of total waiting time and average waiting time
         printSummary(totalWaitingTime, processes.size());
+        printGanttChart(ganttChart);
     }
 
     // SJF Scheduling
@@ -129,6 +155,7 @@ public class Program {
         processes.sort(Comparator.comparingInt(p -> p.burstTime)); // Sort by burst time
         int currentTime = 0;
         int totalWaitingTime = 0, totalTurnaroundTime = 0;
+        List<String> ganttChart = new ArrayList<>();
 
         System.out.println("\n--- SJF Scheduling ---");
         System.out.printf("%-10s%-15s%-15s%-15s%-15s%-15s\n", 
@@ -136,6 +163,7 @@ public class Program {
 
         for (Process process : processes) {
             currentTime = Math.max(currentTime, process.arrivalTime); // Account for idle time
+            ganttChart.add(String.format("[%d-%d] %s", currentTime, currentTime + process.burstTime, process.name));
             process.completionTime = currentTime + process.burstTime;
             process.turnaroundTime = process.completionTime - process.arrivalTime;
             process.waitingTime = process.turnaroundTime - process.burstTime;
@@ -149,25 +177,20 @@ public class Program {
 
             currentTime += process.burstTime;
         }
-
         printSummary(totalWaitingTime, processes.size());
+        printGanttChart(ganttChart);
     }
 
     // Round-Robin Scheduling
     static void simulateRR(List<Process> processes, Scanner scanner) {
         System.out.print("Enter the time quantum: ");
         int timeQuantum = scanner.nextInt();
-        scanner.nextLine();  // Consume the newline
-
-        // Clone the original processes to preserve their initial burst times for accurate calculations
-        List<Process> originalProcesses = new ArrayList<>();
-        for (Process p : processes) {
-            originalProcesses.add(new Process(p.name, p.arrivalTime, p.burstTime)); // Store original burst time
-        }
+        scanner.nextLine();
 
         Queue<Process> queue = new LinkedList<>(processes);
         int currentTime = 0;
         int totalWaitingTime = 0;
+        List<String> ganttChart = new ArrayList<>();
 
         System.out.println("\n--- Round-Robin Scheduling ---");
         System.out.printf("%-10s%-15s%-15s%-15s%-15s%-15s\n", 
@@ -175,81 +198,49 @@ public class Program {
 
         while (!queue.isEmpty()) {
             Process process = queue.poll();
-            int originalBurstTime = originalProcesses.stream()
-                                                      .filter(p -> p.name.equals(process.name))
-                                                      .findFirst()
-                                                      .get()
-                                                      .burstTime;
-
-            // Calculate the time slice (time quantum or remaining burst time)
             int timeSlice = Math.min(process.burstTime, timeQuantum);
-            process.burstTime -= timeSlice; // Deduct the time slice from the remaining burst time
-            currentTime += timeSlice; // Update current time
+            ganttChart.add(String.format("[%d-%d] %s", currentTime, currentTime + timeSlice, process.name));
+            currentTime += timeSlice;
+            process.burstTime -= timeSlice;
 
             if (process.burstTime > 0) {
-                queue.add(process); // Re-add process to queue if it hasn't finished
+                queue.add(process);
             } else {
-                // Calculate completion time, turnaround time, and waiting time
                 process.completionTime = currentTime;
                 process.turnaroundTime = process.completionTime - process.arrivalTime;
-                process.waitingTime = process.turnaroundTime - originalBurstTime; // Correct calculation of waiting time
-
+                process.waitingTime = process.turnaroundTime - process.remainingTime;
                 totalWaitingTime += process.waitingTime;
 
-                // Print the process details
                 System.out.printf("%-10s%-15d%-15d%-15d%-15d%-15d\n",
-                                  process.name, process.arrivalTime, originalBurstTime, // Use original burst time
+                                  process.name, process.arrivalTime, process.remainingTime,
                                   process.completionTime, process.turnaroundTime, process.waitingTime);
             }
         }
-
-        // Print the summary of total waiting time and average waiting time
         printSummary(totalWaitingTime, processes.size());
+        printGanttChart(ganttChart);
     }
 
-//    static void simulatePriority(List<Process> processes, Scanner scanner) {
-//        Map<String, Integer> priorities = new HashMap<>();
-//        System.out.println("Enter the priorities for each process (lower number = higher priority):");
-//        
-//        // Get the priorities from the user
-//        for (Process process : processes) {
-//            System.out.print("Priority for " + process.name + ": ");
-//            int priority = scanner.nextInt();
-//            priorities.put(process.name, priority);
-//        }
-//
-//        // Sort the processes by priority (ascending order)
-//        processes.sort(Comparator.comparingInt(p -> priorities.get(p.name)));
-//        
-//        // FCFS simulation after sorting by priority
-//        simulateFCFS(processes);
-//    }
-    
     static void simulatePriority(List<Process> processes, Scanner scanner) {
         Map<String, Integer> priorities = new HashMap<>();
         System.out.println("Enter the priorities for each process (lower number = higher priority):");
-        
-        // Get the priority for each process from the user
+
         for (Process process : processes) {
             System.out.print("Priority for " + process.name + ": ");
             priorities.put(process.name, scanner.nextInt());
         }
 
-        // Sort processes based on priority values (lower number means higher priority)
         processes.sort(Comparator.comparingInt(p -> priorities.get(p.name)));
-
-        // Now that the processes are sorted by priority, proceed with FCFS or other scheduling logic
         int currentTime = 0;
         int totalWaitingTime = 0, totalTurnaroundTime = 0;
+        List<String> ganttChart = new ArrayList<>();
 
         System.out.println("\n--- Priority Scheduling ---");
         System.out.printf("%-10s%-15s%-15s%-15s%-15s%-15s\n", 
-                          "Process", "Arrival Time", "Burst Time", "Completion Time", "Turnaround Time", "Waiting Time");
+                          "Process", "Arrival Time", "Burst Time", "Completion Time", "Turn Around Time", "Waiting Time");
 
-        // Process each process in the sorted order
         for (Process process : processes) {
-            // Handle completion time, turnaround time, and waiting time
-            currentTime = Math.max(currentTime, process.arrivalTime); // Account for idle time
+            currentTime = Math.max(currentTime, process.arrivalTime);
+            ganttChart.add(String.format("[%d-%d] %s", currentTime, currentTime + process.burstTime, process.name));
             process.completionTime = currentTime + process.burstTime;
             process.turnaroundTime = process.completionTime - process.arrivalTime;
             process.waitingTime = process.turnaroundTime - process.burstTime;
@@ -263,72 +254,56 @@ public class Program {
 
             currentTime += process.burstTime;
         }
-
-        // Print summary of the scheduling simulation
         printSummary(totalWaitingTime, processes.size());
+        printGanttChart(ganttChart);
     }
 
+    //Simulate Shortest Remaining Time First Scheduling
     static void simulateSRTF(List<Process> processes) {
-        // Initialize remaining time for each process
-        for (Process process : processes) {
-            process.remainingTime = process.burstTime;
-        }
-
         processes.sort(Comparator.comparingInt(p -> p.arrivalTime)); // Sort by arrival time
         int currentTime = 0;
         int totalWaitingTime = 0, totalTurnaroundTime = 0;
-
-        System.out.println("\n--- SRTF Scheduling ---");
-        System.out.printf("%-10s%-15s%-15s%-15s%-15s%-15s\n",
-                "Process", "Arrival Time", "Burst Time", "Completion Time", "Turn Around Time", "Waiting Time");
-
+        List<String> ganttChart = new ArrayList<>();
         List<Process> readyQueue = new ArrayList<>();
-        int completedProcesses = 0;
+        
+        System.out.println("\n--- SRTF Scheduling ---");
+        System.out.printf("%-10s%-15s%-15s%-15s%-15s%-15s\n", 
+                          "Process", "Arrival Time", "Burst Time", "Completion Time", "Turn Around Time", "Waiting Time");
 
-        while (completedProcesses < processes.size()) {
-            // Add processes that have arrived by currentTime
-            for (Process process : processes) {
-                if (process.arrivalTime <= currentTime && !readyQueue.contains(process) && process.remainingTime > 0) {
-                    readyQueue.add(process);
-                }
+        // While there are processes that haven't been executed yet
+        while (!processes.isEmpty() || !readyQueue.isEmpty()) {
+            // Add all the processes that have arrived at the current time to the ready queue
+            while (!processes.isEmpty() && processes.get(0).arrivalTime <= currentTime) {
+                readyQueue.add(processes.remove(0));
             }
 
-            // If there are processes to execute
             if (!readyQueue.isEmpty()) {
-                // Select the process with the shortest remaining time
-                readyQueue.sort(Comparator.comparingInt(p -> p.remainingTime));
-                Process currentProcess = readyQueue.get(0);
+                // Sort the ready queue by remaining burst time (SRTF)
+                readyQueue.sort(Comparator.comparingInt(p -> p.burstTime));
 
-                // Execute the process for 1 unit of time
-                currentProcess.remainingTime--;
-                currentTime++;
+                Process process = readyQueue.remove(0); // Get the process with the shortest remaining time
+                ganttChart.add(String.format("[%d-%d] %s", currentTime, currentTime + process.burstTime, process.name));
+                process.completionTime = currentTime + process.burstTime;
+                process.turnaroundTime = process.completionTime - process.arrivalTime;
+                process.waitingTime = process.turnaroundTime - process.burstTime;
 
-                // If the process is completed
-                if (currentProcess.remainingTime == 0) {
-                    currentProcess.completionTime = currentTime;
-                    currentProcess.turnaroundTime = currentProcess.completionTime - currentProcess.arrivalTime;
-                    currentProcess.waitingTime = currentProcess.turnaroundTime - currentProcess.burstTime;
-                    totalWaitingTime += currentProcess.waitingTime;
-                    totalTurnaroundTime += currentProcess.turnaroundTime;
+                totalWaitingTime += process.waitingTime;
+                totalTurnaroundTime += process.turnaroundTime;
 
-                    // Remove from ready queue
-                    readyQueue.remove(currentProcess);
-                    completedProcesses++;
+                System.out.printf("%-10s%-15d%-15d%-15d%-15d%-15d\n",
+                                  process.name, process.arrivalTime, process.burstTime,
+                                  process.completionTime, process.turnaroundTime, process.waitingTime);
 
-                    // Print process details
-                    System.out.printf("%-10s%-15d%-15d%-15d%-15d%-15d\n",
-                            currentProcess.name, currentProcess.arrivalTime,
-                            currentProcess.burstTime, currentProcess.completionTime,
-                            currentProcess.turnaroundTime, currentProcess.waitingTime);
-                }
+                currentTime += process.burstTime;
             } else {
-                // If no process is ready, advance time
-                currentTime++;
+                currentTime++; // No processes are ready, so increment time
             }
         }
 
         printSummary(totalWaitingTime, processes.size());
+        printGanttChart(ganttChart);
     }
+
 
 
 

@@ -265,6 +265,7 @@ public class Program {
         int totalWaitingTime = 0, totalTurnaroundTime = 0;
         List<String> ganttChart = new ArrayList<>();
         List<Process> readyQueue = new ArrayList<>();
+        int completedProcesses = 0; // Track number of completed processes
         
         System.out.println("\n--- SRTF Scheduling ---");
         System.out.printf("%-10s%-15s%-15s%-15s%-15s%-15s\n", 
@@ -295,15 +296,15 @@ public class Program {
                                   process.completionTime, process.turnaroundTime, process.waitingTime);
 
                 currentTime += process.burstTime;
+                completedProcesses++; // Increment completed processes count
             } else {
                 currentTime++; // No processes are ready, so increment time
             }
         }
 
-        printSummary(totalWaitingTime, processes.size());
+        printSummary(totalWaitingTime, completedProcesses); // Use completedProcesses instead of original processCount
         printGanttChart(ganttChart);
     }
-
 
 
 
